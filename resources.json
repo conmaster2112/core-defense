@@ -1,0 +1,16 @@
+{
+    "levels":[
+        {
+            "name":"debug",
+            "type":"image",
+            "id":-1,
+            "src":"/assets/level-debug.png"
+        },
+        {
+            "name":"Dev-0",
+            "type":"image",
+            "id":0,
+            "src":"/assets/level0.png"
+        }
+    ]
+}

@@ -1,0 +1,1 @@
+powershell -NoExit -EP ByPass -File $PSScriptRoot/set-paths.ps1

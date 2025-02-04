@@ -1,0 +1,1 @@
+powershell -EP ByPass -File .\scripts\%1.ps1
