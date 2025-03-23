@@ -1,5 +1,5 @@
 
-//#region src/client/math/vec2.ts
+//#region app/math/vec2.ts
 const sP = Object.setPrototypeOf;
 const Vec2 = function Vec2$1(x, y) {
 	return sP({
@@ -7,31 +7,41 @@ const Vec2 = function Vec2$1(x, y) {
 		y
 	}, new.target?.prototype ?? Vec2$1.prototype);
 };
-Vec2.add = function add(vec1, vec2OrScalar) {
-	if (typeof vec2OrScalar === "number") return sP({
-		x: vec1.x + vec2OrScalar,
-		y: vec1.y + vec2OrScalar
-	}, Vec2.prototype);
+Vec2.add = function add(vec1, vec2) {
 	return sP({
-		x: vec1.x + vec2OrScalar.x,
-		y: vec1.y + vec2OrScalar.y
+		x: vec1.x + vec2.x,
+		y: vec1.y + vec2.y
 	}, Vec2.prototype);
 };
-Vec2.prototype.add = function add(vecOrScalar) {
-	return Vec2.add(this, vecOrScalar);
-};
-Vec2.subtract = function subtract(vec1, vec2OrScalar) {
-	if (typeof vec2OrScalar === "number") return sP({
-		x: vec1.x - vec2OrScalar,
-		y: vec1.y - vec2OrScalar
-	}, Vec2.prototype);
+Vec2.addS = function addS(vec1, scalar) {
 	return sP({
-		x: vec1.x - vec2OrScalar.x,
-		y: vec1.y - vec2OrScalar.y
+		x: vec1.x + scalar,
+		y: vec1.y + scalar
 	}, Vec2.prototype);
 };
-Vec2.prototype.subtract = function subtract(vecOrScalar) {
-	return Vec2.subtract(this, vecOrScalar);
+Vec2.prototype.add = function add(vec) {
+	return Vec2.add(this, vec);
+};
+Vec2.prototype.addS = function addS(scalar) {
+	return Vec2.addS(this, scalar);
+};
+Vec2.subtract = function subtract(vec1, vec2) {
+	return sP({
+		x: vec1.x - vec2.x,
+		y: vec1.y - vec2.y
+	}, Vec2.prototype);
+};
+Vec2.subtractS = function subtractS(vec1, scalar) {
+	return sP({
+		x: vec1.x - scalar,
+		y: vec1.y - scalar
+	}, Vec2.prototype);
+};
+Vec2.prototype.subtract = function subtract(vec) {
+	return Vec2.subtract(this, vec);
+};
+Vec2.prototype.subtractS = function subtractS(scalar) {
+	return Vec2.subtractS(this, scalar);
 };
 Vec2.multiplyS = function multiply(vec, scalar) {
 	return sP({
@@ -116,11 +126,11 @@ Vec2.prototype.lerp = function lerp(vec, t) {
 	return Vec2.lerp(this, vec, t);
 };
 Vec2.rotate = function rotate(vec, angle) {
-	const cos = Math.cos(angle);
-	const sin = Math.sin(angle);
+	const cos$1 = Math.cos(angle);
+	const sin$2 = Math.sin(angle);
 	return sP({
-		x: vec.x * cos - vec.y * sin,
-		y: vec.x * sin + vec.y * cos
+		x: vec.x * cos$1 - vec.y * sin$2,
+		y: vec.x * sin$2 + vec.y * cos$1
 	}, Vec2.prototype);
 };
 Vec2.prototype.rotate = function rotate(angle) {
@@ -128,144 +138,7 @@ Vec2.prototype.rotate = function rotate(angle) {
 };
 
 //#endregion
-//#region src/client/texture/drawable.ts
-var Drawable = class {
-	render(context) {
-		context.save();
-		this.__render__(context);
-		context.restore();
-	}
-};
-
-//#endregion
-//#region src/client/texture/texture-source.ts
-var TextureSource = class extends Drawable {
-	scaleX = 1;
-	scaleY = 1;
-	rotation = 0;
-	__render__(context) {
-		const data = this.getTextureData();
-		context.scale(this.scaleX, this.scaleY);
-		if (this.rotation) context.rotate(this.rotation);
-		context.drawImage(data.src, data.x, data.y, data.w, data.h, -(data.w / 2), -(data.h / 2), data.w, data.h);
-	}
-};
-
-//#endregion
-//#region src/client/texture/texture.ts
-var Texture = class extends TextureSource {
-	constructor(src, x, y, w, h) {
-		super();
-		this.src = src;
-		this.x = x;
-		this.y = y;
-		this.w = w;
-		this.h = h;
-	}
-	getTextureData() {
-		return this;
-	}
-};
-
-//#endregion
-//#region src/client/texture/texture-frame.ts
-var FrameTexture = class extends TextureSource {
-	frames = [];
-	currentFrame = 0;
-	addFrame(src, x, y, w, h) {
-		this.frames.push({
-			src,
-			x,
-			y,
-			w,
-			h
-		});
-	}
-	addFrameData(data) {
-		this.frames.push(data);
-	}
-	getTextureData(frame) {
-		return this.frames[(frame ?? this.currentFrame) % this.frames.length];
-	}
-};
-
-//#endregion
-//#region src/client/utils.ts
-var Utils = class {
-	constructor() {}
-	static isDebug = true;
-	static readImageData(img) {
-		const cv = document.createElement("canvas");
-		const ct = cv.getContext("2d");
-		cv.width = img.width;
-		cv.height = img.height;
-		ct.imageSmoothingEnabled = false;
-		ct.drawImage(img, 0, 0);
-		return ct.getImageData(0, 0, cv.width, cv.height);
-	}
-	static async fetchImage(src) {
-		const img = new Image();
-		img.src = src;
-		await new Promise((r) => img.addEventListener("load", r, { once: true }));
-		return img;
-	}
-	static delay(time) {
-		return new Promise((res) => setTimeout(res, time));
-	}
-	static recompute(canvas, mapper) {
-		const src = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height);
-		mapper(src.data.buffer, src.width, src.height);
-		canvas.getContext("2d").putImageData(src, 0, 0);
-	}
-};
-
-//#endregion
-//#region src/client/texture/texture-map.ts
-var TextureMap = class TextureMap extends Texture {
-	constructor(src) {
-		super(src, 0, 0, src.width, src.height);
-		this.src = src;
-	}
-	getTexture(x, y, w, h) {
-		return new Texture(this.src, this.x + x, this.y + y, w, h);
-	}
-	getFrameTexture(x, y, w, h, frames) {
-		const frameTexture = new FrameTexture();
-		for (let i = 0; i < frames; i++) frameTexture.addFrame(this.src, this.x + x + i * w, y, w, h);
-		return frameTexture;
-	}
-	static async FromSrc(str) {
-		const img = await Utils.fetchImage(str);
-		return new TextureMap(img);
-	}
-};
-
-//#endregion
-//#region src/client/texture/texture-reader.ts
-var TextureReader = class TextureReader {
-	buffer;
-	constructor(buffer, width, height) {
-		this.width = width;
-		this.height = height;
-		this.buffer = new Uint32Array(buffer);
-	}
-	getPixelColor(x, y) {
-		if (x < 0 || x >= this.width) return -1;
-		if (y < 0 || y >= this.height) return -1;
-		return this.buffer[y * this.width + x];
-	}
-	static From(src) {
-		return new this(src.data.buffer, src.width, src.height);
-	}
-	static async FromSrc(str) {
-		const img = await Utils.fetchImage(str);
-		const { data, height, width } = Utils.readImageData(img);
-		return new TextureReader(data.buffer, width, height);
-	}
-};
-
-//#endregion
-//#region src/client/managers/input.ts
+//#region app/managers/input.ts
 let KeyboardKey = function(KeyboardKey$1) {
 	KeyboardKey$1["ArrowDown"] = "ArrowDown";
 	KeyboardKey$1["ArrowUp"] = "ArrowUp";
@@ -288,10 +161,10 @@ var InputManager = class {
 		});
 	}
 };
-const input = new InputManager();
+const inputManager = new InputManager();
 
 //#endregion
-//#region src/client/element-id.ts
+//#region app/element-id.ts
 let ElementIds = function(ElementIds$1) {
 	ElementIds$1["WindowTitle"] = "element-title-window-title";
 	ElementIds$1["ViewportCanvas"] = "element-canvas-viewport";
@@ -299,7 +172,7 @@ let ElementIds = function(ElementIds$1) {
 }({});
 
 //#endregion
-//#region src/client/managers/ui.ts
+//#region app/managers/ui.ts
 var UIManager = class UIManager {
 	static getElement(id) {
 		const e = document.getElementById(id);
@@ -348,234 +221,332 @@ var UIManager = class UIManager {
 		return document.createElement("canvas");
 	}
 };
-const ui = new UIManager();
+const uiManager = new UIManager();
 
 //#endregion
-//#region src/client/managers/network.ts
-var NetworkManager = class {
-	async ping() {
-		return !await this.fetchJSON("/api/ping");
-	}
-	async getLevels() {
-		return await this.fetchJSON("/api/levels").then((e) => e?.data ?? null);
-	}
-	async fetchJSON(url) {
-		const response = await fetch(url).catch(() => null);
-		if (!response || !response.ok) return null;
-		return await response.json().catch((e) => null);
-	}
-};
-const network = new NetworkManager();
+//#region app/drawable/animation/custom-function.ts
+const { sin: sin$1, PI: PI$1 } = Math;
+const QU = PI$1 / 2;
 
 //#endregion
-//#region src/client/pacman/level/level-mapper.ts
-var LevelMapper = class {
-	constructor() {}
-	static createTextureMap(textureMap, offsetX, size) {
-		const _textureData = (x, y) => textureMap.getTexture(x * size, y * size, size, size);
-		const map = {};
-		for (let i = 0; i < 256; i++) {
-			const [x, y] = this.getTextureOffset(i);
-			map[i] = _textureData(x + offsetX, Number(y));
-		}
-		return map;
-	}
-	static getTextureOffset(bitMap) {
-		let bitsCount = this.getPositiveBitCount(bitMap & 85);
-		const masks = [...this.getMaskRotations(bitMap, 3)];
-		let offset = 0;
-		if (bitsCount === 0) return [offset, 0];
-		offset++;
-		if (bitsCount === 1) {
-			for (let i in masks) if ((masks[i] & 1) > 0) return [offset, i];
-		}
-		offset++;
-		if (bitsCount === 2) for (let i in masks) {
-			if (this.m(masks[i], 5)) return [offset + (this.m(masks[i], 7) ? 2 : 1), i];
-			if (this.m(masks[i], 17)) return [offset, i];
-		}
-		offset += 3;
-		if (bitsCount === 3) for (let i in masks) {
-			let b = masks[i];
-			if (this.m(b, 21)) if (this.m(b, 23)) if (this.m(b, 31)) return [offset + 3, i];
-			else return [offset + 1, i];
-			else if (this.m(b, 29)) return [offset + 2, i];
-			else return [offset, i];
-		}
-		offset += 4;
-		if (bitsCount === 4) {
-			bitsCount = this.getPositiveBitCount(bitMap & 170);
-			if (bitsCount === 0) return [offset, 0];
-			offset++;
-			if (bitsCount === 1) {
-				for (let i in masks) if (this.m(masks[i], 87)) return [offset, i];
-			}
-			offset++;
-			if (bitsCount === 2) for (let i in masks) {
-				if (this.m(masks[i], 95)) return [offset, i];
-				if (this.m(masks[i], 119)) return [offset + 1, i];
-			}
-			offset += 2;
-			if (bitsCount === 3) {
-				for (let i in masks) if (this.m(masks[i], 127)) return [offset, i];
-			}
-			offset++;
-			if (bitsCount === 4) return [offset, 0];
-		}
-		return [0, 0];
-	}
-	static m(b1, b2) {
-		return (b1 & b2) === b2;
-	}
-	static maskRotation(b1, offset) {
-		const p = (b1 & 255) >> offset;
-		const p2 = (b1 & 255) << 8 - offset & 255;
-		return p | p2;
-	}
-	static *getMaskRotations(n1, rotations) {
-		yield n1;
-		for (let i = 0; i < rotations; i++) yield n1 = this.maskRotation(n1, 2);
-	}
-	static getPositiveBitCount(n) {
-		let i = 0;
-		do
-			i += n & 1;
-		while ((n >>= 1) > 0);
-		return i;
+//#region app/drawable/drawable.ts
+var Drawable = class {
+	render(context) {
+		context.save();
+		this.__render__(context);
+		context.restore();
 	}
 };
 
 //#endregion
-//#region src/client/pacman/resources.ts
-var Resources = class Resources {
-	constructor(textureMap, collisionTextureSet) {
-		this.textureMap = textureMap;
-		this.collisionTextureSet = collisionTextureSet;
+//#region app/drawable/visual.ts
+var Visual = class extends Drawable {
+	animations = new Set();
+	async playAnimation(animation, duration) {
+		return new Promise((res) => this.animations.add({
+			animation,
+			endTimeDelta: 1 / (performance.now() + duration),
+			res
+		}));
 	}
-	static async From(src) {
-		const img = await Utils.fetchImage(src);
-		const map = new TextureMap(img);
-		const set = LevelMapper.createTextureMap(map, 17, 8);
-		return new Resources(map, set);
+	__render__(context) {
+		this.draw(context);
+	}
+	draw(context, time = performance.now()) {
+		for (const a of this.animations) {
+			const d = time * a.endTimeDelta;
+			if (d > 1) {
+				this.animations.delete(a);
+				a.res();
+				continue;
+			}
+			a.animation.apply(context, d);
+		}
+		this.__draw__(context);
 	}
 };
 
 //#endregion
-//#region src/client/pacman/level/level-texture-generator.ts
-var LevelTextureGenerator = class extends TextureSource {
-	src = ui.newCanvas();
-	x = 0;
-	y = 0;
-	get h() {
-		return this.src.height;
-	}
-	get w() {
-		return this.src.width;
-	}
-	getTextureData() {
-		return this;
-	}
-	constructor(scale) {
+//#region app/drawable/stride.ts
+var Stride = class extends Drawable {
+	constructor(visual) {
 		super();
-		this.scale = scale;
+		this.visual = visual;
 	}
-	static generate(provider, resources$1, scale = 8) {
-		const gen = new this(scale);
-		const canvas = gen.src, context = canvas.getContext("2d"), textureSet = resources$1.collisionTextureSet;
-		canvas.style.backgroundColor = "transparent";
-		context.fillStyle = "transparent";
-		context.reset();
-		const { w: sw, h: sh } = provider;
-		canvas.width = sw * scale;
-		canvas.height = sh * scale;
-		context.imageSmoothingEnabled = false;
-		for (let x = 0; x < sw; x++) for (let y = 0; y < sh; y++) if (provider.getAvailability(x, y)) {
-			Resources.prototype.textureMap;
-			const data = (textureSet[provider.getBitMaskFor(x, y)] ?? textureSet[0]).getTextureData();
-			ui.context.imageSmoothingEnabled = false;
-			context.drawImage(data.src, data.x, data.y, data.w, data.h, x * scale, y * scale, scale, scale);
+	scaleX = 1;
+	scaleY = 1;
+	rotation = 0;
+	position = Vec2(0, 0);
+	__render__(context) {
+		context.translate(this.position.x, this.position.y);
+		context.scale(this.scaleX, this.scaleY);
+		if (this.rotation) context.rotate(this.rotation);
+		this.visual.draw(context);
+	}
+};
+
+//#endregion
+//#region app/drawable/shapes.ts
+const { PI, sin, cos } = Math;
+const PIx2 = PI * 2;
+var DrawableShapesFunctions = class {
+	constructor() {}
+	static circlePath(context, radius = 1) {
+		context.arc(0, 0, radius, 0, PIx2);
+	}
+	static anyGonPath(context, gonLevel, size = 1) {
+		const rad = PIx2 / gonLevel;
+		for (let i = 0; i <= gonLevel; i++) {
+			const angle = i * rad;
+			const dx = size * cos(angle);
+			const dy = size * sin(angle);
+			if (i === 0) context.moveTo(dx, dy);
+			else context.lineTo(dx, dy);
 		}
-		return gen;
+	}
+};
+var DrawableShapesPaths = class {
+	constructor() {}
+	static anyGonPaths = {
+		min: 2,
+		max: 30
+	};
+	static triangle = this.anyGonPaths[3] ??= new Path2D();
+	static rectangle = this.anyGonPaths[4] ??= new Path2D();
+	static pentagon = this.anyGonPaths[5] ??= new Path2D();
+	static hexagon = this.anyGonPaths[6] ??= new Path2D();
+	static circle = new Path2D();
+	static {
+		const p = this.anyGonPaths;
+		for (let i = p.min; i < p.max; i++) {
+			DrawableShapesFunctions.anyGonPath(p[i] ??= new Path2D(), i);
+			p[i].closePath();
+		}
+		this.circle.arc(0, 0, 1, 0, PIx2);
+		this.circle.closePath();
 	}
 };
 
 //#endregion
-//#region src/client/pacman/level/level-provider.ts
-var LevelProvider = class {
-	constructor(w, h) {
-		this.w = w;
-		this.h = h;
+//#region app/drawable/custom-visual.ts
+var CustomVisual = class extends Visual {
+	constructor(callable) {
+		super();
+		this.callable = callable;
 	}
-	getBitMaskFor(x, y) {
-		const v = (this.getAvailability(x, y - 1) ? 1 : 0) << 0 | (this.getAvailability(x + 1, y - 1) ? 1 : 0) << 1 | (this.getAvailability(x + 1, y) ? 1 : 0) << 2 | (this.getAvailability(x + 1, y + 1) ? 1 : 0) << 3 | (this.getAvailability(x, y + 1) ? 1 : 0) << 4 | (this.getAvailability(x - 1, y + 1) ? 1 : 0) << 5 | (this.getAvailability(x - 1, y) ? 1 : 0) << 6 | (this.getAvailability(x - 1, y - 1) ? 1 : 0) << 7;
-		return v;
-	}
-};
-
-//#endregion
-//#region src/client/pacman/level/image-level-provider.ts
-var ImageLevelProvider = class extends LevelProvider {
-	data;
-	reader;
-	constructor(img) {
-		super(img.width, img.height);
-		this.data = Utils.readImageData(img);
-		this.reader = new TextureReader(this.data.data.buffer, this.w, this.h);
-	}
-	getAvailability(x, y) {
-		return this.reader.getPixelColor(x, y);
+	__draw__(context) {
+		this.callable(context);
 	}
 };
 
 //#endregion
-//#region src/client/pacman/game.ts
-var PacManGame = class {
-	constructor(resources$1) {
-		this.resources = resources$1;
+//#region app/entities/entity.ts
+var Entity = class extends Stride {
+	velocity = Vec2(0, 0);
+	constructor() {
+		super(null);
 	}
-	currentLevel;
-	async run() {
-		await this.initialize();
-		await Utils.delay(6e4);
-		ui.close();
+	__render__(context) {
+		const { x, y } = this.velocity, d = context.__delta__;
+		context.translate(x * d, y * d);
+		super.__render__(context);
 	}
-	async initialize() {
-		ui.canvasElement.height = 800;
-		ui.canvasElement.width = 1e3;
-		ui.context.imageSmoothingEnabled = false;
-		const levels = await network.getLevels();
-		if (!levels) throw new ReferenceError("Failed to get levels");
-		console.log(levels);
-		const lvl = levels[Math.floor(Math.random() * levels.length)];
-		const levelProvider = new ImageLevelProvider(await Utils.fetchImage(lvl.src));
-		const background = LevelTextureGenerator.generate(levelProvider, this.resources, 8);
-		ui.title = `Level - ${lvl.name}`;
-		Utils.recompute(background.src, (buffer) => {
-			const array = new Uint8ClampedArray(buffer);
-			let scale = .8;
-			let t = performance.now();
-			for (let i = 0; i < array.length; i += 4) {
-				const v = array[i] + 30;
-				const isWall = array[i + 3];
-				if (!isWall) continue;
-				array[i + 3] = 100 + v / 2;
-				array[i] = v * .5 * scale;
-				array[i + 1] = v * .7 * scale;
-				array[i + 2] = v * scale;
-			}
-			console.log(performance.now() - t);
+};
+
+//#endregion
+//#region app/game/enemy.ts
+var Enemy = class extends Entity {
+	health = 200;
+	damage = 200;
+	constructor(game$1) {
+		super();
+		this.game = game$1;
+		const g = 0;
+		this.visual = new CustomVisual((c) => {
+			c.rotate(Math.PI * 2 * Math.random());
+			c.stroke(DrawableShapesPaths.anyGonPaths[2 + Math.ceil(g + 3 * Math.random())]);
 		});
-		ui.context.translate(ui.canvasWidth / 2, ui.canvasHeight / 2);
-		background.scaleX = -ui.canvasWidth / background.w;
-		background.scaleY = -ui.canvasHeight / background.h;
-		background.render(ui.context);
 	}
 };
 
 //#endregion
-//#region src/client/index.ts
-const resources = await Resources.From("/assets/texture-map-256x64.png");
-const game = new PacManGame(resources);
-game.run();
+//#region app/game/projectile.ts
+var Projectile = class extends Entity {
+	constructor() {
+		super();
+		const g = 0;
+		this.visual = new CustomVisual((c) => {
+			const { x, y } = this.velocity.normalize();
+			c.rotate(Math.atan2(y, x) - Math.PI / 2);
+			c.fillRect(-5, -20, 10, 40);
+		});
+	}
+};
+
+//#endregion
+//#region app/game/game.ts
+var Game = class {
+	constructor(context) {
+		this.context = context;
+	}
+	optionsResolution = 1024;
+	optionsShowStats = false;
+	optionsUseDelta = true;
+	optionsTickTime = 200;
+	__delta = 1;
+	__deltaPrediction = 1;
+	tickUpTime = performance.now();
+	fpsIncrement = 0;
+	fpsCount = 0;
+	fpsTimestamp = 0;
+	currentTick = 0;
+	forceFieldRadius = 500;
+	coreRadius = 75;
+	coreHealth = 580;
+	maxCoreHealth = 580;
+	enemyRadius = 40;
+	enemies = new Set();
+	projectiles = new Set();
+	async start() {
+		const canvas = uiManager.canvasElement;
+		canvas.height = canvas.width = this.optionsResolution;
+		this.currentTick = 0;
+		this.renderLoop();
+		this.tick();
+	}
+	tickEnemies() {
+		let targetEnemy = null;
+		let targetEnemyDistance = Infinity;
+		let __cacheSaveRadius = this.coreRadius + this.enemyRadius;
+		for (const enemy of this.enemies) {
+			const newPosition = enemy.position.add(enemy.velocity);
+			const distance = enemy.position.magnitude();
+			enemy["__distance__"] = distance;
+			if (distance <= __cacheSaveRadius) {
+				this.coreHealth--;
+				this.enemies.delete(enemy);
+			}
+			if (distance < targetEnemyDistance) {
+				targetEnemy = enemy;
+				targetEnemyDistance = distance;
+			}
+			let newVelocity = enemy.velocity.add(enemy.position.normalize().multiplyS(-2.8));
+			newVelocity = newVelocity.add(Vec2(newVelocity.y, -newVelocity.x).multiplyS(.08));
+			if (newVelocity.magnitude() > 10) newVelocity = newVelocity.normalize().multiplyS(10);
+			enemy.velocity = newVelocity;
+			enemy.position = newPosition;
+		}
+	}
+	async tick() {
+		this.tickEnemies();
+		if (this.currentTick % 5 === 0) for (let i = 0; i < 1; i++) {
+			const entity = new Enemy(this);
+			entity.position = Vec2(Math.random() - .5, Math.random() - .5).normalize().multiplyS(1e3);
+			entity.rotation = Math.PI * 2 * Math.random();
+			entity.velocity = entity.position.multiplyS(-.01);
+			entity.scaleX = entity.scaleY = this.enemyRadius;
+			this.enemies.add(entity);
+		}
+		if (this.currentTick % 5 === 0) {
+			const projectile = new Projectile();
+			this.enemies.add(projectile);
+			projectile.position = Vec2(Math.random() - .5, Math.random() - .5).normalize().multiplyS(1e3);
+			const { x, y } = projectile.velocity = projectile.position.multiplyS(-.03);
+			projectile.velocity = projectile.velocity.add(Vec2(y, -x));
+		}
+		this.currentTick++;
+	}
+	getStats() {
+		return `FPS: ${this.fpsCount}, RES: ${this.optionsResolution}x${this.optionsResolution}, D: ${this.__delta.toFixed(2)}, TICK: ${this.currentTick}, ENTITIES: ${this.enemies.size}`;
+	}
+	async renderLoop() {
+		let now = performance.now(), difference = now - this.tickUpTime;
+		if (difference > this.optionsTickTime) {
+			this.tickUpTime = now;
+			difference = 0;
+			this.tick();
+		}
+		if (now - this.fpsTimestamp > 1e3) {
+			this.fpsCount = this.fpsIncrement;
+			this.fpsIncrement = 0;
+			this.fpsTimestamp = now;
+		}
+		const context = this.context;
+		context.__delta__ = this.__delta = difference / this.optionsTickTime;
+		const scale = new Vec2(uiManager.clientHeight, uiManager.clientWidth).normalize();
+		context.reset();
+		context.textRendering = "optimizeSpeed";
+		if (this.optionsShowStats) {
+			context.save();
+			context.fillStyle = "#9999";
+			context.textAlign = "start";
+			context.textBaseline = "top";
+			context.scale(scale.x * 3.2, scale.y * 3);
+			context.fillText(this.getStats(), 4, 4);
+			context.restore();
+		}
+		context.translate(context.canvas.width / 2, context.canvas.height / 2);
+		context.scale(scale.x, scale.y);
+		this.renderForceField();
+		context.strokeStyle = "#6699ff";
+		context.fillStyle = "#b38";
+		context.lineWidth = .1;
+		for (const enemy of this.enemies) enemy.render(context);
+		this.renderCore();
+		this.fpsIncrement++;
+		requestAnimationFrame(() => this.renderLoop());
+	}
+	renderForceField() {
+		const { context, forceFieldRadius } = this;
+		context.save();
+		context.scale(forceFieldRadius, forceFieldRadius);
+		context.strokeStyle = "#8899ff99";
+		context.lineWidth = 3 / forceFieldRadius;
+		context.fillStyle = "#8899ff08";
+		context.stroke(DrawableShapesPaths.circle);
+		context.fill(DrawableShapesPaths.circle);
+		context.strokeStyle = "#fff8";
+		context.lineWidth = 1 / forceFieldRadius;
+		context.stroke(DrawableShapesPaths.circle);
+		context.restore();
+	}
+	renderCore() {
+		const stability = this.coreHealth / this.maxCoreHealth, context = this.context, shapeStability = 4 + 10 * stability;
+		const reverseStability = 1 - stability;
+		context.save();
+		context.fillStyle = "white";
+		context.textAlign = "center";
+		context.textBaseline = "middle";
+		context.scale(2, 2);
+		context.fillText((stability * 100).toFixed(1) + "%", 0, 0);
+		context.restore();
+		context.save();
+		context.scale(this.coreRadius, this.coreRadius);
+		for (let i = 0; i < 1 + reverseStability * 5; i++) {
+			context.save();
+			context.rotate(Math.random() * Math.PI * 2);
+			const scale = Math.random() * reverseStability * .5;
+			context.scale(1 + scale, 1 + scale);
+			const shape = DrawableShapesPaths.anyGonPaths[~~(shapeStability + Math.random() * 2)];
+			context.strokeStyle = `#fff`;
+			context.lineWidth = 1 / this.coreRadius;
+			context.stroke(shape);
+			context.strokeStyle = `rgb(${50 + reverseStability * 155}, 50, ${100 + stability * 155})`;
+			context.lineWidth = 3 / this.coreRadius;
+			context.fillStyle = "#2042";
+			context.stroke(shape);
+			context.fill(shape);
+			context.restore();
+		}
+		context.restore();
+	}
+};
+
+//#endregion
+//#region app/main.ts
+const game = new Game(uiManager.context);
+game.optionsShowStats = true;
+game.optionsResolution = 1024;
+game.start();
 
 //#endregion

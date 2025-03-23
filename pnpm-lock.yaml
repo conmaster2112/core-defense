@@ -7,20 +7,13 @@ settings:
 importers:
 
   .:
-    dependencies:
-      gl-matrix:
-        specifier: ^3.4.3
-        version: 3.4.3
-      rolldown:
-        specifier: 1.0.0-beta.2-commit.5deb279
-        version: 1.0.0-beta.2-commit.5deb279(typescript@5.7.3)
     devDependencies:
-      '@types/node':
-        specifier: ^22.10.7
-        version: 22.10.7
       oxlint:
         specifier: ^0.15.7
         version: 0.15.7
+      rolldown:
+        specifier: 1.0.0-beta.2-commit.5deb279
+        version: 1.0.0-beta.2-commit.5deb279(typescript@5.7.3)
       typescript:
         specifier: ^5.7.3
         version: 5.7.3
@@ -145,16 +138,10 @@ packages:
   '@tybys/wasm-util@0.9.0':
     resolution: {integrity: sha512-6+7nlbMVX/PVDCwaIQ8nTOPveOcFLSt8GcXdx8hD0bt39uWxYT88uXzqTd4fTvqta7oeUJqudepapKNt2DYJFw==}
 
-  '@types/node@22.10.7':
-    resolution: {integrity: sha512-V09KvXxFiutGp6B7XkpaDXlNadZxrzajcY50EuoLIpQ6WWYCSvf19lVIazzfIzQvhUN2HjX12spLojTnhuKlGg==}
-
   '@valibot/to-json-schema@1.0.0-beta.4':
     resolution: {integrity: sha512-wXBdCyoqec+NLCl5ihitXzZXD4JAjPK3+HfskSXzfhiNFvKje0A/v1LygqKidUgIbaJtREmq/poJGbaS/0MKuQ==}
     peerDependencies:
       valibot: ^1.0.0 || ^1.0.0-beta.5 || ^1.0.0-rc
-
-  gl-matrix@3.4.3:
-    resolution: {integrity: sha512-wcCp8vu8FT22BnvKVPjXa/ICBWRq/zjFfdofZy1WSpQZpphblv12/bOQLBC1rMM7SGOFS9ltVmKOHil5+Ml7gA==}
 
   oxlint@0.15.7:
     resolution: {integrity: sha512-ECx9retPd7Rvq62TasGODyQ4mrMtqBCCB18xOYGiAf8PP61snHaokLeTWQFf+pTURWpJZ9pIi2pMIDKh2P2SpQ==}
@@ -177,9 +164,6 @@ packages:
     resolution: {integrity: sha512-84MVSjMEHP+FQRPy3pX9sTVV/INIex71s9TL2Gm5FG/WG1SqXeKyZ0k7/blY/4FdOzI12CBy1vGc4og/eus0fw==}
     engines: {node: '>=14.17'}
     hasBin: true
-
-  undici-types@6.20.0:
-    resolution: {integrity: sha512-Ny6QZ2Nju20vw1SRHe3d9jVu6gJ+4e3+MMpqu7pqE5HT6WsTSlce++GQmK5UXS8mzV8DSYHrQH+Xrf2jVcuKNg==}
 
   valibot@1.0.0-beta.12:
     resolution: {integrity: sha512-j3WIxJ0pmUFMfdfUECn3YnZPYOiG0yHYcFEa/+RVgo0I+MXE3ToLt7gNRLtY5pwGfgNmsmhenGZfU5suu9ijUA==}
@@ -283,15 +267,9 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
-  '@types/node@22.10.7':
-    dependencies:
-      undici-types: 6.20.0
-
   '@valibot/to-json-schema@1.0.0-beta.4(valibot@1.0.0-beta.12(typescript@5.7.3))':
     dependencies:
       valibot: 1.0.0-beta.12(typescript@5.7.3)
-
-  gl-matrix@3.4.3: {}
 
   oxlint@0.15.7:
     optionalDependencies:
@@ -329,8 +307,6 @@ snapshots:
     optional: true
 
   typescript@5.7.3: {}
-
-  undici-types@6.20.0: {}
 
   valibot@1.0.0-beta.12(typescript@5.7.3):
     optionalDependencies:
