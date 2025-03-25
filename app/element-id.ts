@@ -4,5 +4,6 @@ export enum ElementIds {
     TableTitles = "table-headers",
     TableValues = "table-values",
     TableButtons = "table-buttons",
-    Stats = "stats-div"
+    Stats = "stats-div",
+    GameTitle = "GameTitle"
 }

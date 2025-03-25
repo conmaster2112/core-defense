@@ -1,16 +1,20 @@
 import { Vec2 } from "../math";
-import { gameProperties, infoProperties, uiManager } from "../managers";
 import { DrawableShapesPaths } from "../drawable";
 import { Enemy } from "./enemy";
 import { Projectile } from "./projectile";
+import { UIManager } from "../managers";
+import { GameProperties } from "./properties";
+import { Utils } from "../utils";
+import { BaseInfo, INFINITY_LEVEL, LEVELS } from "./level";
 
 export class Game {
+    private gameProperties = new GameProperties();
     private keepRendering = false;
     public constructor(public readonly context: CanvasRenderingContext2D) {}
     public optionsResolution = 1024;
     public optionsShowStats = false;
     public optionsUseDelta = true;
-    public optionsTickTime: number = 50;
+    public optionsTickTime: number = 60;
     protected __delta = 1;
     protected __deltaPrediction = 1;
     protected tickUpTime = performance.now();
@@ -18,6 +22,7 @@ export class Game {
     protected fpsCount = 0;
     protected fpsTimestamp = 0;
     public currentTick = 0;
+    public levelInProgress: Iterator<void> | null = null;
 
     // Base
     public baseScale = 0.8;
@@ -27,13 +32,17 @@ export class Game {
     public coreRadius = 75;
     public coreHealth = 80;
     public maxCoreHealth = 580;
+    public maxReward = 150;
+    public minReward = 50;
 
     // Enemy
     protected enemyHitBox = 40;
     protected projectilesToSpawn = 0;
-    protected maxEnemySpeed = 5;
+    protected maxEnemySpeed = 2;
+    protected enemyHealth = 50;
+    protected enemyDamage = 10;
     // Projectiles
-    protected maxProjectileSpeed = 25;
+    protected maxProjectileSpeed = 35;
     protected projectileHitBox = 40;
 
     protected readonly enemies: Set<Enemy> = new Set();
@@ -41,10 +50,48 @@ export class Game {
 
     //protected readonly dangerous_enemies: Set<Enemy> = new Set();
     protected readonly projectiles: Set<Projectile> = new Set();
+    public async showTitle(title: string, timeout: number): Promise<void>{
+        UIManager.gameTitle.textContent = title;
+        UIManager.gameTitle.style.display = "block";
+        await Utils.delay(timeout);
+        UIManager.gameTitle.style.display = "none";
+    }
+    public * levelRunner(level: IterableIterator<BaseInfo | number>): Generator<void>{
+        for(const info of level){
+            if(typeof info === "number") {
+                if(info < 0) while(this.enemies.size) yield;
+                for(let i = 0; i < info; i++) yield;
+            }
+            else this.spawnEnemy(info);
+        }
+    }
+    public async onEnd(): Promise<void>{
+        await Utils.delay(500);
+        this.context.reset();
+        if(this.coreHealth <= 0)
+            await this.showTitle("You failed to pass this level!", 2000);
+        else
+        {
+            this.gameProperties.level++;
+            await this.showTitle("Level Passed!", 2000);
+            this.gameProperties.electrons += this.gameProperties.level*2*100;
+        }
+        this.start();
+    }
     public async start(): Promise<void> {
-        const canvas = uiManager.canvasElement;
+        if(this.gameProperties.level > LEVELS.length){
+            this.gameProperties.level = LEVELS.length + 1;
+        }
+        await this.showTitle("Level " + (this.gameProperties.level > LEVELS.length?"Impossible":this.gameProperties.level), 3000);
+        this.levelInProgress = this.levelRunner(LEVELS[this.gameProperties.level - 1]?.()??INFINITY_LEVEL());
+        const canvas = UIManager.canvasElement;
         canvas.height = canvas.width = this.optionsResolution;
-        this.coreHealth = this.maxCoreHealth = gameProperties.health.value;
+        this.forceFieldRadius = this.gameProperties.attackRangeValue + this.coreRadius;
+        this.coreHealth = this.maxCoreHealth = this.gameProperties.maxHealthValue;
+        this.baseScale = 400/this.forceFieldRadius;
+        this.enemies.clear();
+        this.activeEnemies.clear();
+        this.projectiles.clear();
         
         // Reset events
         this.currentTick = 0;
@@ -77,7 +124,7 @@ export class Game {
 
             // Is inside of force field
             if(distance <= this.forceFieldRadius) {
-                maxEnemySpeed *= 0.5;
+                maxEnemySpeed *= 0.8;
                 if(enemy.abstractHealth > 0){ 
                     this.activeEnemies.add(enemy);
                     // Check for enemy distance
@@ -123,7 +170,7 @@ export class Game {
 
                 // Kill enemy if damage is zero
                 if((target.health -= projectile.damage) <= 0) {
-                    infoProperties.electrons.value+=13;
+                    this.gameProperties.electrons += ~~((this.maxReward-this.minReward)*Math.random() + this.minReward);
                     this.enemyKill(target);
                 }
 
@@ -143,41 +190,49 @@ export class Game {
     }
     protected spawnProjectile(target: Enemy): Projectile{
         const projectile = new Projectile();
+        projectile.damage = this.gameProperties.damageValue;
         projectile.target = target;
         this.projectiles.add(projectile);
         this.projectilesToSpawn--;
         if((target.abstractHealth -= projectile.damage) <= 0) this.activeEnemies.delete(target);
         return projectile;
     }
+    protected spawnEnemy(baseInfo: BaseInfo): void{
+        const entity = new Enemy(this);
+        entity.position = Vec2(Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyS(this.forceFieldRadius + this.enemyHitBox * 5);
+        entity.rotation = Math.PI * 2 * Math.random();
+        entity.velocity = entity.position.multiplyS(-0.01);
+
+        entity.scaleX = entity.scaleY = this.enemyHitBox * baseInfo.level;
+        entity.damage = this.enemyDamage * baseInfo.level;
+        entity.health = entity.abstractHealth = this.enemyHealth * baseInfo.level;
+        entity.maxSpeedAmplifier = this.maxEnemySpeed / baseInfo.level;
+        console.log(baseInfo.level);
+        this.enemies.add(entity);
+    }
     protected async tick(): Promise<void> {
-        this.forceFieldRadius = gameProperties.attackRange.value + this.coreRadius;
-        this.baseScale = 400/this.forceFieldRadius;
         const newTarget = this.allEnemyTick();
         this.allProjectileTick();
 
-        if(this.currentTick % 100 === 0)
-        for(let i = 0; i < ((this.currentTick + 1)/100); i++){
-            const entity = new Enemy(this);
-            entity.position = Vec2(Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyS(600/this.baseScale);
-            entity.rotation = Math.PI * 2 * Math.random();
-            entity.velocity = entity.position.multiplyS(-0.01);
-            entity.scaleX = entity.scaleY = this.enemyHitBox;
-            if(Math.random() > 0.8) {
-                entity.scaleX = entity.scaleY*=0.7;
-                entity.maxSpeedAmplifier = 1.1;
-            }
-            //Utils.delay(40_000).then(()=>this.enemies.delete(entity));
-            this.enemies.add(entity);
-        }
+        const {done} = this.levelInProgress?.next()??{};
 
         if(newTarget && this.projectilesToSpawn >= 1)
             this.spawnProjectile(newTarget);
 
-        if(this.projectilesToSpawn < gameProperties.stackSize.value) this.projectilesToSpawn += gameProperties.attackSpeed.value;
+        if(this.projectilesToSpawn < this.gameProperties.bulletStackValue) {
+            this.projectilesToSpawn += this.gameProperties.attackSpeedValue;
+        }
+
+        this.forceFieldRadius = this.gameProperties.attackRangeValue + this.coreRadius;
+        this.baseScale = 400/this.forceFieldRadius;
+
         //End of the tick
         this.currentTick++;
 
-        if(this.coreHealth <= 0) this.keepRendering = false;
+        if(this.coreHealth <= 0 || done) {
+            this.keepRendering = false;
+            this.onEnd();
+        }
     }
     protected getStats(): string {
         return `FPS: ${this.fpsCount}, RES: ${this.optionsResolution}x${this.optionsResolution}, D: ${this.__delta.toFixed(2)}, TICK: ${this.currentTick}, EE: ${this.enemies.size}, EPR: ${this.projectiles.size}, STACK: ${this.projectilesToSpawn.toFixed(2)}`;
@@ -198,7 +253,7 @@ export class Game {
         }
         const context = this.context;
         (context as any).__delta__ = this.__delta = difference / this.optionsTickTime;
-        const scale = new Vec2(uiManager.clientHeight, uiManager.clientWidth).normalize();
+        const scale = new Vec2(UIManager.clientHeight, UIManager.clientWidth).normalize();
 
         // Reset before drawing!
         context.reset();
@@ -248,7 +303,7 @@ export class Game {
 
         //await Utils.delay(50);
         if(this.keepRendering) requestAnimationFrame(() => this.renderLoop());
-        else{
+        else if(this.coreHealth<=0){
             context.reset();
             context.textRendering = "optimizeSpeed";
             // Initialize base rendering context

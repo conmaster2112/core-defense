@@ -18,6 +18,23 @@ div h3 {
     border-bottom-color: #0ff;
     border-bottom: 0.1rem solid;
 }
+.title {
+    display: flex;
+    flex-direction: row;
+    position: absolute;
+    width: 100%;
+    height: min-content;
+    text-align: center;
+    align-content: center;
+    justify-content: center;
+}
+.title h1 {
+    display: block;
+    background-color: #030713e8;
+    border-radius: 0.3rem;
+    padding: 1rem 2rem;
+    font-size: 10rem;
+}
 div p {
     padding: 0;
     margin: 0.2rem;

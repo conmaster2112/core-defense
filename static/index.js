@@ -76,15 +76,15 @@ Vec2.dotProduct = function dotProduct(vec1, vec2) {
 Vec2.prototype.dotProduct = function dotProduct(vec) {
 	return Vec2.dotProduct(this, vec);
 };
-Vec2.reflect = function reflect(vec, normal) {
-	const dotProduct = Vec2.dotProduct(vec, normal);
+Vec2.reflect = function reflect(vec, normal$1) {
+	const dotProduct = Vec2.dotProduct(vec, normal$1);
 	return sP({
-		x: vec.x - 2 * dotProduct * normal.x,
-		y: vec.y - 2 * dotProduct * normal.y
+		x: vec.x - 2 * dotProduct * normal$1.x,
+		y: vec.y - 2 * dotProduct * normal$1.y
 	}, Vec2.prototype);
 };
-Vec2.prototype.reflect = function reflect(normal) {
-	return Vec2.reflect(this, normal);
+Vec2.prototype.reflect = function reflect(normal$1) {
+	return Vec2.reflect(this, normal$1);
 };
 Vec2.magnitude = function magnitude(vec) {
 	return Math.sqrt(vec.x ** 2 + vec.y ** 2);
@@ -135,210 +135,6 @@ Vec2.rotate = function rotate(vec, angle) {
 };
 Vec2.prototype.rotate = function rotate(angle) {
 	return Vec2.rotate(this, angle);
-};
-
-//#endregion
-//#region app/managers/input.ts
-let KeyboardKey = function(KeyboardKey$1) {
-	KeyboardKey$1["ArrowDown"] = "ArrowDown";
-	KeyboardKey$1["ArrowUp"] = "ArrowUp";
-	KeyboardKey$1["ArrowLeft"] = "ArrowLeft";
-	KeyboardKey$1["ArrowRight"] = "ArrowRight";
-	KeyboardKey$1["Space"] = " ";
-	return KeyboardKey$1;
-}({});
-var InputManager = class {
-	wasPressed = new Set();
-	pressedKeys = {};
-	constructor() {
-		window.addEventListener("keydown", (e) => {
-			if (e.repeat) return;
-			this.pressedKeys[e.key] = true;
-			this.wasPressed.add(e.key);
-		});
-		window.addEventListener("keyup", (e) => {
-			delete this.pressedKeys[e.key];
-		});
-	}
-};
-const inputManager = new InputManager();
-
-//#endregion
-//#region app/element-id.ts
-let ElementIds = function(ElementIds$1) {
-	ElementIds$1["WindowTitle"] = "element-title-window-title";
-	ElementIds$1["ViewportCanvas"] = "element-canvas-viewport";
-	ElementIds$1["TableTitles"] = "table-headers";
-	ElementIds$1["TableValues"] = "table-values";
-	ElementIds$1["TableButtons"] = "table-buttons";
-	ElementIds$1["Stats"] = "stats-div";
-	return ElementIds$1;
-}({});
-
-//#endregion
-//#region app/managers/ui.ts
-function getValue(id) {
-	let v = localStorage[id];
-	if (v) return JSON.parse(v);
-	return null;
-}
-var UIManager = class UIManager {
-	static getElement(id) {
-		const e = document.getElementById(id);
-		if (!e) throw new ReferenceError("Failed to get element with id of " + id);
-		return e;
-	}
-	canvasElement;
-	titleElement;
-	bodyElement;
-	context;
-	tableTitles = UIManager.getElement(ElementIds.TableTitles);
-	tableValues = UIManager.getElement(ElementIds.TableValues);
-	tableButtons = UIManager.getElement(ElementIds.TableButtons);
-	statsDiv = UIManager.getElement(ElementIds.Stats);
-	clientWidth = 0;
-	clientHeight = 0;
-	constructor() {
-		this.canvasElement = UIManager.getElement(ElementIds.ViewportCanvas);
-		this.titleElement = UIManager.getElement(ElementIds.WindowTitle);
-		this.bodyElement = document.body;
-		this.context = this.canvasElement.getContext("2d");
-		if (!this.context) throw new ReferenceError("Failed to get context from canvas");
-		this.title = "PacMan lite";
-		window.addEventListener("resize", () => this.__update());
-		this.__update();
-	}
-	get title() {
-		return this.titleElement.textContent;
-	}
-	set title(v) {
-		this.titleElement.textContent = v;
-	}
-	get canvasWidth() {
-		return this.canvasElement.width;
-	}
-	get canvasHeight() {
-		return this.canvasElement.height;
-	}
-	__update() {
-		this.clientWidth = this.bodyElement.clientWidth;
-		this.clientHeight = this.bodyElement.clientHeight;
-	}
-	close() {
-		window.close();
-	}
-	setWindowSize(width, height) {
-		window.resizeTo(width, height);
-	}
-	newCanvas() {
-		return document.createElement("canvas");
-	}
-	static createElement(type, text) {
-		let th = document.createElement(type);
-		th.textContent = text;
-		return th;
-	}
-};
-const uiManager = new UIManager();
-var Saveable = class {
-	object = {};
-	constructor(id) {
-		this.id = id;
-		const v = getValue(id);
-		Object.assign(this.object, v ?? {});
-	}
-	save() {
-		localStorage[this.id] = JSON.stringify(this.object);
-	}
-	toJSON() {
-		return this.object;
-	}
-};
-var GameProperty = class GameProperty extends Saveable {
-	set value(v) {
-		this.htmlValueElement.textContent = String((this.object.value = v).toFixed(2));
-		this.save();
-	}
-	get value() {
-		return this.object.value ?? 0;
-	}
-	htmlValueElement;
-	htmlButtonElement;
-	set level(v) {
-		this.object.level = v;
-		this.save();
-	}
-	get level() {
-		return this.object.level ?? 0;
-	}
-	constructor(id, name, value, initialCost, incrementalMultiplier, unit, max) {
-		super(id);
-		this.name = name;
-		this.initialCost = initialCost;
-		this.incrementalMultiplier = incrementalMultiplier;
-		this.unit = unit;
-		this.max = max;
-		uiManager.tableTitles.appendChild(UIManager.createElement("th", name));
-		uiManager.tableValues.appendChild(this.htmlValueElement = UIManager.createElement("td", String(value)));
-		const [buttonElement, _th] = GameProperty.createButton();
-		uiManager.tableButtons.appendChild(_th);
-		this.htmlButtonElement = buttonElement;
-		this.value = this.object.value ?? value;
-		this.level = this.object.level ?? 0;
-		buttonElement.textContent = `Upgrade ${this.getConst().toFixed(0)}$`;
-		buttonElement.onclick = () => {
-			const cost = this.getConst();
-			if (cost < infoProperties.electrons.value) {
-				infoProperties.electrons.value -= cost;
-				this.level++;
-				buttonElement.textContent = `Upgrade ${this.getConst().toFixed(0)}$`;
-				this.value += this.unit;
-				if (this.value >= this.max) buttonElement.remove();
-				this.save();
-			}
-		};
-	}
-	getConst() {
-		return this.initialCost * this.incrementalMultiplier ** this.level;
-	}
-	static createButton() {
-		const th = document.createElement("th");
-		const div = document.createElement("div");
-		th.appendChild(div);
-		const button = UIManager.createElement("button", "Upgrade");
-		button.className = "background";
-		div.appendChild(button);
-		return [button, th];
-	}
-};
-var InfoProperty = class extends Saveable {
-	set value(v) {
-		this.htmlValueElement.textContent = `${this.name}: ${String((this.object.value = v).toFixed(this.fixed))}${this.suffix}`;
-		this.save();
-	}
-	get value() {
-		return this.object.value ?? 0;
-	}
-	htmlValueElement;
-	constructor(id, name, value, suffix = "", fixed = 0) {
-		super(id);
-		this.name = name;
-		this.suffix = suffix;
-		this.fixed = fixed;
-		uiManager.statsDiv.appendChild(this.htmlValueElement = document.createElement("p"));
-		this.value = this.object.value ?? value;
-	}
-};
-const gameProperties = {
-	health: new GameProperty("health", "Health", 800, 200, 1.08, 50, 8e3),
-	stackSize: new GameProperty("projectile_stack", "Projectile Stack", 2, 300, 1.1, 1, 10),
-	attackSpeed: new GameProperty("attack_speed", "Attack Speed", .05, 200, 1.01, .01, .9),
-	attackRange: new GameProperty("attack_range", "Attack Range", 350, 100, 1.05, 5, 1e3)
-};
-const infoProperties = {
-	level: new InfoProperty("level", "Level", 1),
-	gameSpeed: new InfoProperty("gameSpeed", "Speed", 1, "x", 1),
-	electrons: new InfoProperty("electrons", "Electrons", 0, "$", 0)
 };
 
 //#endregion
@@ -605,8 +401,441 @@ var Projectile = class extends Entity {
 };
 
 //#endregion
+//#region app/managers/input.ts
+let KeyboardKey = function(KeyboardKey$1) {
+	KeyboardKey$1["ArrowDown"] = "ArrowDown";
+	KeyboardKey$1["ArrowUp"] = "ArrowUp";
+	KeyboardKey$1["ArrowLeft"] = "ArrowLeft";
+	KeyboardKey$1["ArrowRight"] = "ArrowRight";
+	KeyboardKey$1["Space"] = " ";
+	return KeyboardKey$1;
+}({});
+var InputManager = class {
+	wasPressed = new Set();
+	pressedKeys = {};
+	constructor() {
+		window.addEventListener("keydown", (e) => {
+			if (e.repeat) return;
+			this.pressedKeys[e.key] = true;
+			this.wasPressed.add(e.key);
+		});
+		window.addEventListener("keyup", (e) => {
+			delete this.pressedKeys[e.key];
+		});
+	}
+};
+const inputManager = new InputManager();
+
+//#endregion
+//#region app/element-id.ts
+let ElementIds = function(ElementIds$1) {
+	ElementIds$1["WindowTitle"] = "element-title-window-title";
+	ElementIds$1["ViewportCanvas"] = "element-canvas-viewport";
+	ElementIds$1["TableTitles"] = "table-headers";
+	ElementIds$1["TableValues"] = "table-values";
+	ElementIds$1["TableButtons"] = "table-buttons";
+	ElementIds$1["Stats"] = "stats-div";
+	ElementIds$1["GameTitle"] = "GameTitle";
+	return ElementIds$1;
+}({});
+
+//#endregion
+//#region app/managers/ui/manager.ts
+var UIManager = class UIManager {
+	static getElement(id) {
+		const e = document.getElementById(id);
+		if (!e) throw new ReferenceError("Failed to get element with id of " + id);
+		return e;
+	}
+	static canvasElement = UIManager.getElement(ElementIds.ViewportCanvas);
+	static titleElement = UIManager.getElement(ElementIds.WindowTitle);
+	static bodyElement = document.body;
+	static context = UIManager.canvasElement.getContext("2d");
+	static tableTitles = UIManager.getElement(ElementIds.TableTitles);
+	static tableValues = UIManager.getElement(ElementIds.TableValues);
+	static tableButtons = UIManager.getElement(ElementIds.TableButtons);
+	static gameTitle = UIManager.getElement(ElementIds.GameTitle);
+	static statsDiv = UIManager.getElement(ElementIds.Stats);
+	static clientWidth = 0;
+	static clientHeight = 0;
+	static {
+		if (!UIManager.context) throw new ReferenceError("Failed to get context from canvas");
+		UIManager.titleElement.textContent = "Core Defense";
+		window.addEventListener("resize", () => UIManager.__update());
+		UIManager.__update();
+	}
+	static get title() {
+		return UIManager.titleElement.textContent;
+	}
+	static set title(v) {
+		UIManager.titleElement.textContent = v;
+	}
+	static get canvasWidth() {
+		return UIManager.canvasElement.width;
+	}
+	static get canvasHeight() {
+		return UIManager.canvasElement.height;
+	}
+	static __update() {
+		UIManager.clientWidth = UIManager.bodyElement.clientWidth;
+		UIManager.clientHeight = UIManager.bodyElement.clientHeight;
+	}
+	static close() {
+		window.close();
+	}
+	static setWindowSize(width, height) {
+		window.resizeTo(width, height);
+	}
+	static newCanvas() {
+		return document.createElement("canvas");
+	}
+	static create = document.createElement.bind(document);
+};
+
+//#endregion
+//#region app/managers/ui/upgrade-pane.ts
+var UpgradePane = class UpgradePane {
+	titleElement;
+	valueElement;
+	buttonElement;
+	constructor() {
+		this.titleElement = UIManager.create("th");
+		this.valueElement = UIManager.create("td");
+		const td = UIManager.create("td");
+		const div = UIManager.create("div");
+		td.appendChild(div);
+		this.buttonElement = UIManager.create("button");
+		this.buttonElement.className = "background";
+		div.appendChild(this.buttonElement);
+	}
+	static create() {
+		const upgradePane = new UpgradePane();
+		UIManager.tableTitles.appendChild(upgradePane.titleElement);
+		UIManager.tableValues.appendChild(upgradePane.valueElement);
+		UIManager.tableButtons.appendChild(upgradePane.buttonElement.parentElement.parentElement);
+		return upgradePane;
+	}
+	get title() {
+		return this.titleElement.textContent;
+	}
+	set title(value) {
+		this.titleElement.textContent = value;
+	}
+	get value() {
+		return this.valueElement.textContent;
+	}
+	set value(value) {
+		this.valueElement.textContent = value;
+	}
+	get buttonText() {
+		return this.buttonElement.textContent;
+	}
+	set buttonText(value) {
+		this.buttonElement.textContent = value;
+	}
+	get onClick() {
+		return this.buttonElement.onclick;
+	}
+	set onClick(action) {
+		this.buttonElement.onclick = action;
+	}
+};
+
+//#endregion
+//#region app/managers/ui/info-line.ts
+var InfoLine = class InfoLine {
+	paragraphElement;
+	constructor() {
+		this.paragraphElement = UIManager.create("p");
+	}
+	static create() {
+		const infoLine = new InfoLine();
+		UIManager.statsDiv.appendChild(infoLine.paragraphElement);
+		return infoLine;
+	}
+	get text() {
+		return this.paragraphElement.textContent;
+	}
+	set text(value) {
+		this.paragraphElement.textContent = value;
+	}
+};
+
+//#endregion
+//#region app/game/properties.ts
+var GameProperties = class {
+	_level;
+	_electrons;
+	levelInfoLine;
+	electronsInfoLine;
+	attackSpeed;
+	attackRange;
+	maxHealth;
+	bulletStack;
+	damage;
+	constructor() {
+		this._level = this.getFromLocalStorage("level", 1);
+		this._electrons = this.getFromLocalStorage("electrons", 0);
+		this.levelInfoLine = InfoLine.create();
+		this.electronsInfoLine = InfoLine.create();
+		this.updateUI();
+		const all = [
+			this.attackSpeed = new CoreAbility("attackSpeed", "Attack Speed", .06, 100, 85, .02, 1.2, this.saveAbilityLevel.bind(this)),
+			this.attackRange = new CoreAbility("attackRange", "Attack Range", 350, 100, 10, 50, 1.2, this.saveAbilityLevel.bind(this)),
+			this.maxHealth = new CoreAbility("maxHealth", "Max Health", 100, 100, 10, 50, 1.2, this.saveAbilityLevel.bind(this)),
+			this.bulletStack = new CoreAbility("bulletStack", "Bullet Stack", 2, 200, 8, 1, 1.2, this.saveAbilityLevel.bind(this)),
+			this.damage = new CoreAbility("damage", "Damage", 10, 100, 100, 1, 1.2, this.saveAbilityLevel.bind(this))
+		];
+		for (const a of all) {
+			const v = localStorage.getItem(`${a.nameId}Level`) ?? null;
+			if (v !== null) a.level = parseInt(v);
+		}
+	}
+	get level() {
+		return this._level;
+	}
+	set level(value) {
+		this._level = value;
+		this.saveToLocalStorage("level", value);
+		this.updateUI();
+	}
+	get electrons() {
+		return this._electrons;
+	}
+	set electrons(value) {
+		this._electrons = value;
+		this.saveToLocalStorage("electrons", value);
+		this.updateUI();
+	}
+	get attackSpeedValue() {
+		return this.attackSpeed.currentValue;
+	}
+	get attackRangeValue() {
+		return this.attackRange.currentValue;
+	}
+	get maxHealthValue() {
+		return this.maxHealth.currentValue;
+	}
+	get bulletStackValue() {
+		return this.bulletStack.currentValue;
+	}
+	get damageValue() {
+		return this.damage.currentValue;
+	}
+	saveAbilityLevel(c) {
+		if (c.level >= c.maxLevel) return;
+		if (c.currentCost > this.electrons) return;
+		this.electrons -= c.currentCost;
+		c.level++;
+		this.saveToLocalStorage(`${c.nameId}Level`, c.level);
+	}
+	getFromLocalStorage(key, defaultValue) {
+		const value = localStorage.getItem(key);
+		return value !== null ? parseInt(value, 10) : defaultValue;
+	}
+	saveToLocalStorage(key, value) {
+		localStorage.setItem(key, value.toString());
+	}
+	updateUI() {
+		this.levelInfoLine.text = `Level: ${this._level}`;
+		this.electronsInfoLine.text = `Electrons: ${this._electrons.toFixed(0)}$`;
+	}
+};
+var CoreAbility = class {
+	nameId;
+	displayName;
+	initialValue;
+	initialCost;
+	maxLevel;
+	unitPerLevel;
+	costAmplifierPerLevel;
+	_level;
+	upgradePane;
+	constructor(nameId, displayName, initialValue, initialCost, maxLevel, unitPerLevel, costAmplifierPerLevel, callback) {
+		this.nameId = nameId;
+		this.displayName = displayName;
+		this.initialValue = initialValue;
+		this.initialCost = initialCost;
+		this.maxLevel = maxLevel;
+		this.unitPerLevel = unitPerLevel;
+		this.costAmplifierPerLevel = costAmplifierPerLevel;
+		this._level = 0;
+		this.upgradePane = UpgradePane.create();
+		this.upgradePane.onClick = () => void callback(this);
+		this.updateUpgradePane();
+	}
+	get level() {
+		return this._level;
+	}
+	set level(value) {
+		this._level = value;
+		this.updateUpgradePane();
+	}
+	get currentValue() {
+		return this.initialValue + this.unitPerLevel * this._level;
+	}
+	get currentCost() {
+		return this.initialCost * Math.pow(this.costAmplifierPerLevel, this._level);
+	}
+	updateUpgradePane() {
+		this.upgradePane.title = this.displayName;
+		this.upgradePane.value = `Value: ${this.currentValue.toFixed(2)}`;
+		this.upgradePane.buttonText = `Upgrade ${this.currentCost.toFixed()}$`;
+		if (this.level >= this.maxLevel) this.upgradePane.buttonElement.style.display = "none";
+	}
+};
+
+//#endregion
+//#region app/utils.ts
+var Utils = class {
+	constructor() {}
+	static isDebug = true;
+	static readImageData(img) {
+		const cv = document.createElement("canvas");
+		const ct = cv.getContext("2d");
+		cv.width = img.width;
+		cv.height = img.height;
+		ct.imageSmoothingEnabled = false;
+		ct.drawImage(img, 0, 0);
+		return ct.getImageData(0, 0, cv.width, cv.height);
+	}
+	static async fetchImage(src) {
+		const img = new Image();
+		img.src = src;
+		await new Promise((r) => img.addEventListener("load", r, { once: true }));
+		return img;
+	}
+	static delay(time) {
+		return new Promise((res) => setTimeout(res, time));
+	}
+	static recompute(canvas, mapper) {
+		const src = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height);
+		mapper(src.data.buffer, src.width, src.height);
+		canvas.getContext("2d").putImageData(src, 0, 0);
+	}
+};
+
+//#endregion
+//#region app/game/level.ts
+var BaseInfo = class BaseInfo {
+	constructor(level) {
+		this.level = level;
+	}
+	static normal = new BaseInfo(1);
+	static strong = new BaseInfo(2);
+	static fast = new BaseInfo(.5);
+	*times(n) {
+		for (let i = 0; i < n; i++) yield this;
+	}
+};
+const { normal, fast, strong } = BaseInfo;
+const LEVELS = [
+	function* Level1() {
+		yield normal;
+		yield 80;
+		yield normal;
+		yield 80;
+		yield normal;
+		yield 80;
+		yield* normal.times(2);
+		yield -1;
+	},
+	function* Level2() {
+		yield normal;
+		yield 70;
+		yield normal;
+		yield 70;
+		yield normal;
+		yield 100;
+		yield strong;
+		yield 100;
+		yield* normal.times(2);
+		yield -1;
+	},
+	function* Level3() {
+		yield fast;
+		yield 50;
+		yield strong;
+		yield fast;
+		yield 50;
+		yield strong;
+		yield strong;
+		yield 60;
+		yield* normal.times(3);
+		yield -1;
+	},
+	function* Level3() {
+		yield fast;
+		yield 5;
+		yield fast;
+		yield 20;
+		yield strong;
+		yield 10;
+		yield fast;
+		yield 50;
+		yield strong;
+		yield strong;
+		yield strong;
+		yield 60;
+		yield* normal.times(4);
+		yield -1;
+	},
+	function* Level4() {
+		for (let i = 0; i < 10; i++) {
+			yield fast;
+			yield 5;
+		}
+		yield fast;
+		yield strong;
+		yield 20;
+		yield strong;
+		yield 10;
+		yield fast;
+		yield strong;
+		yield 50;
+		yield strong;
+		yield strong;
+		yield strong;
+		yield 60;
+		yield* normal.times(5);
+		yield -1;
+	},
+	function* Level5() {
+		for (let i = 0; i < 10; i++) {
+			yield fast;
+			yield normal;
+			yield 10;
+		}
+		yield strong;
+		yield fast;
+		yield strong;
+		yield 20;
+		yield strong;
+		yield 10;
+		yield fast;
+		yield strong;
+		yield strong;
+		yield 50;
+		yield strong;
+		yield strong;
+		yield strong;
+		yield 120;
+		yield* normal.times(15);
+		yield -1;
+	}
+];
+function* INFINITY_LEVEL() {
+	for (let i = 0; i < 100; i += .1) {
+		yield* normal.times(i);
+		yield 20;
+	}
+	yield -1;
+}
+
+//#endregion
 //#region app/game/game.ts
 var Game = class {
+	gameProperties = new GameProperties();
 	keepRendering = false;
 	constructor(context) {
 		this.context = context;
@@ -614,7 +843,7 @@ var Game = class {
 	optionsResolution = 1024;
 	optionsShowStats = false;
 	optionsUseDelta = true;
-	optionsTickTime = 50;
+	optionsTickTime = 60;
 	__delta = 1;
 	__deltaPrediction = 1;
 	tickUpTime = performance.now();
@@ -622,23 +851,60 @@ var Game = class {
 	fpsCount = 0;
 	fpsTimestamp = 0;
 	currentTick = 0;
+	levelInProgress = null;
 	baseScale = .8;
 	forceFieldRadius = 500;
 	coreRadius = 75;
 	coreHealth = 80;
 	maxCoreHealth = 580;
+	maxReward = 150;
+	minReward = 50;
 	enemyHitBox = 40;
 	projectilesToSpawn = 0;
-	maxEnemySpeed = 5;
-	maxProjectileSpeed = 25;
+	maxEnemySpeed = 2;
+	enemyHealth = 50;
+	enemyDamage = 10;
+	maxProjectileSpeed = 35;
 	projectileHitBox = 40;
 	enemies = new Set();
 	activeEnemies = new Set();
 	projectiles = new Set();
+	async showTitle(title, timeout) {
+		UIManager.gameTitle.textContent = title;
+		UIManager.gameTitle.style.display = "block";
+		await Utils.delay(timeout);
+		UIManager.gameTitle.style.display = "none";
+	}
+	*levelRunner(level) {
+		for (const info of level) {
+			if (typeof info === "number") {
+				if (info < 0) while (this.enemies.size) yield;
+				for (let i = 0; i < info; i++) yield;
+			} else this.spawnEnemy(info);
+		}
+	}
+	async onEnd() {
+		await Utils.delay(500);
+		this.context.reset();
+		if (this.coreHealth <= 0) await this.showTitle("You failed to pass this level!", 2e3);
+		else {
+			this.gameProperties.level++;
+			await this.showTitle("Level Passed!", 2e3);
+			this.gameProperties.electrons += this.gameProperties.level * 2 * 100;
+		}
+		this.start();
+	}
 	async start() {
-		const canvas = uiManager.canvasElement;
+		if (this.gameProperties.level > LEVELS.length) {
+			this.gameProperties.level = LEVELS.length + 1;
+		}
+		await this.showTitle("Level " + (this.gameProperties.level > LEVELS.length ? "Impossible" : this.gameProperties.level), 3e3);
+		this.levelInProgress = this.levelRunner(LEVELS[this.gameProperties.level - 1]?.() ?? INFINITY_LEVEL());
+		const canvas = UIManager.canvasElement;
 		canvas.height = canvas.width = this.optionsResolution;
-		this.coreHealth = this.maxCoreHealth = gameProperties.health.value;
+		this.forceFieldRadius = this.gameProperties.attackRangeValue + this.coreRadius;
+		this.coreHealth = this.maxCoreHealth = this.gameProperties.maxHealthValue;
+		this.baseScale = 400 / this.forceFieldRadius;
 		this.currentTick = 0;
 		this.keepRendering = true;
 		this.renderLoop();
@@ -660,7 +926,7 @@ var Game = class {
 				this.enemyKill(enemy);
 			}
 			if (distance <= this.forceFieldRadius) {
-				maxEnemySpeed *= .5;
+				maxEnemySpeed *= .8;
 				if (enemy.abstractHealth > 0) {
 					this.activeEnemies.add(enemy);
 					if (distance < _targetEnemyDistance) {
@@ -691,7 +957,7 @@ var Game = class {
 			if (distance <= _minDistance) {
 				this.projectiles.delete(projectile);
 				if ((target.health -= projectile.damage) <= 0) {
-					infoProperties.electrons.value += 13;
+					this.gameProperties.electrons += ~~((this.maxReward - this.minReward) * Math.random() + this.minReward);
 					this.enemyKill(target);
 				}
 				target.velocity = target.velocity.add(projectile.velocity.multiplyS(.3));
@@ -706,33 +972,40 @@ var Game = class {
 	}
 	spawnProjectile(target) {
 		const projectile = new Projectile();
+		projectile.damage = this.gameProperties.damageValue;
 		projectile.target = target;
 		this.projectiles.add(projectile);
 		this.projectilesToSpawn--;
 		if ((target.abstractHealth -= projectile.damage) <= 0) this.activeEnemies.delete(target);
 		return projectile;
 	}
+	spawnEnemy(baseInfo) {
+		const entity = new Enemy(this);
+		entity.position = Vec2(Math.random() - .5, Math.random() - .5).normalize().multiplyS(this.forceFieldRadius + this.enemyHitBox * 5);
+		entity.rotation = Math.PI * 2 * Math.random();
+		entity.velocity = entity.position.multiplyS(-.01);
+		entity.scaleX = entity.scaleY = this.enemyHitBox * baseInfo.level;
+		entity.damage = this.enemyDamage * baseInfo.level;
+		entity.health = entity.abstractHealth = this.enemyHealth * baseInfo.level;
+		entity.maxSpeedAmplifier = this.maxEnemySpeed / baseInfo.level;
+		console.log(baseInfo.level);
+		this.enemies.add(entity);
+	}
 	async tick() {
-		this.forceFieldRadius = gameProperties.attackRange.value + this.coreRadius;
-		this.baseScale = 400 / this.forceFieldRadius;
 		const newTarget = this.allEnemyTick();
 		this.allProjectileTick();
-		if (this.currentTick % 100 === 0) for (let i = 0; i < (this.currentTick + 1) / 100; i++) {
-			const entity = new Enemy(this);
-			entity.position = Vec2(Math.random() - .5, Math.random() - .5).normalize().multiplyS(600 / this.baseScale);
-			entity.rotation = Math.PI * 2 * Math.random();
-			entity.velocity = entity.position.multiplyS(-.01);
-			entity.scaleX = entity.scaleY = this.enemyHitBox;
-			if (Math.random() > .8) {
-				entity.scaleX = entity.scaleY *= .7;
-				entity.maxSpeedAmplifier = 1.1;
-			}
-			this.enemies.add(entity);
-		}
+		const { done } = this.levelInProgress?.next() ?? {};
 		if (newTarget && this.projectilesToSpawn >= 1) this.spawnProjectile(newTarget);
-		if (this.projectilesToSpawn < gameProperties.stackSize.value) this.projectilesToSpawn += gameProperties.attackSpeed.value;
+		if (this.projectilesToSpawn < this.gameProperties.bulletStackValue) {
+			this.projectilesToSpawn += this.gameProperties.attackSpeedValue;
+		}
+		this.forceFieldRadius = this.gameProperties.attackRangeValue + this.coreRadius;
+		this.baseScale = 400 / this.forceFieldRadius;
 		this.currentTick++;
-		if (this.coreHealth <= 0) this.keepRendering = false;
+		if (this.coreHealth <= 0 || done) {
+			this.keepRendering = false;
+			this.onEnd();
+		}
 	}
 	getStats() {
 		return `FPS: ${this.fpsCount}, RES: ${this.optionsResolution}x${this.optionsResolution}, D: ${this.__delta.toFixed(2)}, TICK: ${this.currentTick}, EE: ${this.enemies.size}, EPR: ${this.projectiles.size}, STACK: ${this.projectilesToSpawn.toFixed(2)}`;
@@ -751,7 +1024,7 @@ var Game = class {
 		}
 		const context = this.context;
 		context.__delta__ = this.__delta = difference / this.optionsTickTime;
-		const scale = new Vec2(uiManager.clientHeight, uiManager.clientWidth).normalize();
+		const scale = new Vec2(UIManager.clientHeight, UIManager.clientWidth).normalize();
 		context.reset();
 		context.textRendering = "optimizeSpeed";
 		if (this.optionsShowStats) {
@@ -775,7 +1048,7 @@ var Game = class {
 		this.renderCore();
 		this.fpsIncrement++;
 		if (this.keepRendering) requestAnimationFrame(() => this.renderLoop());
-		else {
+		else if (this.coreHealth <= 0) {
 			context.reset();
 			context.textRendering = "optimizeSpeed";
 			context.translate(context.canvas.width / 2, context.canvas.height / 2);
@@ -839,10 +1112,9 @@ var Game = class {
 
 //#endregion
 //#region app/main.ts
-const game = new Game(uiManager.context);
+const game = new Game(UIManager.context);
 game.optionsShowStats = true;
 game.optionsResolution = 1024;
 game.start();
 
 //#endregion
-export { Animation, AnimationCustomFunctionChain, AnimationFunction, AnimationNodeTypes, AnimationRotationVisualProperty, AnimationTypes, AnimationVisualProperty, CustomVisual, Drawable, DrawableShapesFunctions, DrawableShapesPaths, Stride, Visual };
