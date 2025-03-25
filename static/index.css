@@ -1,7 +1,7 @@
 :root {
     margin: 0;
     padding: 0;
-    color: wheat;
+    color: rgb(203, 242, 252);
     background-color: #000;
     background-image: url('/assets/background-universe-4.jpeg');
     background-size: cover; /* Scales the image to fit within the element */
@@ -10,12 +10,25 @@
     min-width: 500px;
     min-height: 400px;
 }
+div h3 {
+    font-size: larger;
+    margin-bottom: 1.5rem;
+    margin-top: 0.2rem;
+    font-weight: 100;
+    border-bottom-color: #0ff;
+    border-bottom: 0.1rem solid;
+}
+div p {
+    padding: 0;
+    margin: 0.2rem;
+}
 html {
     margin: 0;
     padding: 0;
     overflow: hidden;
 }
 body {
+    font-family: 'Tektur', sans-serif;
     margin: 0;
     height: 100vh;
     width: 100vw;
@@ -45,6 +58,63 @@ body {
     width: 100%;
 }
 .content {
+    display: flex;
+    flex-direction: row;
+    align-items: end;
+    justify-content: center;
     height: 95%;
     width: 95%;
+}
+#upgrades-table {
+    padding: 0.15rem;
+    background-color: #2238;
+    align-content: end;
+    font-size: 16px;
+}
+#stats-div {
+    display: block;
+    position: absolute;
+    top: 3rem;
+    left: 3rem;
+    padding: 1rem 2rem;
+}
+
+th {
+    padding: 0.3rem 1.2rem;
+    text-align: center;       /* Centers content horizontally */
+    vertical-align: middle;   /* Centers content vertically */
+}
+td {
+    padding: 0.3rem 1.2rem;
+    font-size: larger;
+    border-top: #bff9 solid 1px;
+    text-align: center;       /* Centers content horizontally */
+    vertical-align: middle;   /* Centers content vertically */
+}
+.background {
+    background-color: #2238;
+    border: 2px solid #0ff; /* Neon blue border */
+    color: rgb(108, 255, 255);            /* Neon blue text */
+    border-radius: 8px;     /* Soft rounded corners for a modern look */
+    box-shadow: 0 0 5px #0ff, 0 0 10px #0ff; /* Neon glow effect */
+}
+td div {
+    display: flex;            /* Makes it a flex container */
+    justify-content: center;  /* Centers the button horizontally */
+    align-items: center;      /* Centers the button vertically */
+    height: 100%;  
+}
+button {
+    font-size: 15px;
+    font-weight: 500;
+    text-align: center;
+    padding: 10px 18px;
+    cursor: pointer;
+    text-transform: uppercase; /* Optional: Make text uppercase for style */
+    transition: all 0.1s ease-in-out; /* Smooth hover transition */
+}
+
+button:hover {
+    box-shadow:  0 0 10px #0ff, 0 0 20px #0ff; /* Glow intensifies on hover */
+    transform: scale(1.05); /* Slightly enlarges on hover */
 }

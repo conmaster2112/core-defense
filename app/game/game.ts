@@ -1,20 +1,16 @@
 import { Vec2 } from "../math";
-import { uiManager } from "../managers";
+import { gameProperties, infoProperties, uiManager } from "../managers";
 import { DrawableShapesPaths } from "../drawable";
-import { Utils } from "../utils";
 import { Enemy } from "./enemy";
 import { Projectile } from "./projectile";
 
-type DynamicEnemy = {
-    __distance__: number;
-}
-
 export class Game {
+    private keepRendering = false;
     public constructor(public readonly context: CanvasRenderingContext2D) {}
     public optionsResolution = 1024;
     public optionsShowStats = false;
     public optionsUseDelta = true;
-    public optionsTickTime: number = 200;
+    public optionsTickTime: number = 50;
     protected __delta = 1;
     protected __deltaPrediction = 1;
     protected tickUpTime = performance.now();
@@ -23,96 +19,168 @@ export class Game {
     protected fpsTimestamp = 0;
     public currentTick = 0;
 
+    // Base
+    public baseScale = 0.8;
+
     // Core
     public forceFieldRadius = 500;
     public coreRadius = 75;
-    public coreHealth = 580;
+    public coreHealth = 80;
     public maxCoreHealth = 580;
 
     // Enemy
-    protected enemyRadius = 40;
+    protected enemyHitBox = 40;
+    protected projectilesToSpawn = 0;
+    protected maxEnemySpeed = 5;
+    // Projectiles
+    protected maxProjectileSpeed = 25;
+    protected projectileHitBox = 40;
+
     protected readonly enemies: Set<Enemy> = new Set();
+    protected readonly activeEnemies: Set<Enemy> = new Set();
+
+    //protected readonly dangerous_enemies: Set<Enemy> = new Set();
     protected readonly projectiles: Set<Projectile> = new Set();
     public async start(): Promise<void> {
         const canvas = uiManager.canvasElement;
         canvas.height = canvas.width = this.optionsResolution;
+        this.coreHealth = this.maxCoreHealth = gameProperties.health.value;
         
         // Reset events
         this.currentTick = 0;
         
+        this.keepRendering = true;
         this.renderLoop();
         this.tick();
     }
-    protected tickEnemies(): void{
-        let targetEnemy: Enemy | null = null;
-        let targetEnemyDistance: number = Infinity;
-
-        let __cacheSaveRadius = this.coreRadius + this.enemyRadius;
-
+    protected enemyKill(enemy: Enemy): void{
+        this.enemies.delete(enemy);
+        this.activeEnemies.delete(enemy);
+    }
+    protected allEnemyTick(): Enemy | null{
+        const __cR__ = this.coreRadius + this.enemyHitBox;
+        let targetEnemy: Enemy | null = null, _targetEnemyDistance = Infinity;
 
         for(const enemy of this.enemies) {
             // Update position
-            const newPosition = enemy.position.add(enemy.velocity);
+            const _pos = enemy.position = enemy.position.add(enemy.velocity);
+            let maxEnemySpeed = this.maxEnemySpeed * enemy.maxSpeedAmplifier;
 
             // Check distance
-            const distance = enemy.position.magnitude();
-            (enemy as unknown as DynamicEnemy)["__distance__"] = distance;
+            const distance = _pos.magnitude();
 
             // Enemy hits the core
-            if(distance <= __cacheSaveRadius) {
-                this.coreHealth--;
-                this.enemies.delete(enemy);
+            if(distance <= __cR__) {
+                this.coreHealth -= enemy.damage;
+                this.enemyKill(enemy);
             }
 
-            // Core in danger enemy
-            if(distance < targetEnemyDistance) {
-                targetEnemy = enemy;
-                targetEnemyDistance = distance;
+            // Is inside of force field
+            if(distance <= this.forceFieldRadius) {
+                maxEnemySpeed *= 0.5;
+                if(enemy.abstractHealth > 0){ 
+                    this.activeEnemies.add(enemy);
+                    // Check for enemy distance
+                    if(distance < _targetEnemyDistance) {
+                        targetEnemy = enemy;
+                        _targetEnemyDistance = distance;
+                    }
+                }
             }
 
-
-
-
-            let newVelocity =  enemy.velocity.add(enemy.position.normalize().multiplyS(-2.8));
-            newVelocity = newVelocity.add(Vec2(newVelocity.y, -newVelocity.x).multiplyS(0.08));
-            if(newVelocity.magnitude() > 10) {
-                newVelocity = newVelocity.normalize().multiplyS(10);
+            let newVelocity =  enemy.velocity.add(_pos.normalize().multiplyS(-maxEnemySpeed));
+            if(newVelocity.magnitude() > maxEnemySpeed) {
+                newVelocity = newVelocity.normalize().multiplyS(maxEnemySpeed);
             }
             
             enemy.velocity = newVelocity;
-            enemy.position = newPosition;
         }
+
+        return targetEnemy;
     }
 
-    protected async tick(): Promise<void> {
-        this.tickEnemies();
+    protected allProjectileTick(): void {
+        const _minDistance = this.projectileHitBox + this.enemyHitBox;
+        for(const projectile of this.projectiles) {
 
-        if(this.currentTick % 5 === 0)
-        for(let i = 0; i < 1; i++){
+            // Update position
+            const _pos = projectile.position = projectile.position.add(projectile.velocity);
+            const target = projectile.target;
+
+            // Check for target validity
+            if(!target || !this.enemies.has(target)) {
+                this.projectiles.delete(projectile);
+                continue;
+            }
+
+            const relativeVec = projectile.position.subtract(target.position);
+
+            // Check distance
+            const distance = relativeVec.magnitude();
+            if(distance <= _minDistance) {
+                // Break projectile
+                this.projectiles.delete(projectile);
+
+                // Kill enemy if damage is zero
+                if((target.health -= projectile.damage) <= 0) {
+                    infoProperties.electrons.value+=13;
+                    this.enemyKill(target);
+                }
+
+                target.velocity = target.velocity.add(projectile.velocity.multiplyS(0.3));
+
+                // No other calls in-need
+                continue;
+            }
+
+            let newVelocity = projectile.velocity.add(relativeVec.normalize().multiplyS(-this.maxProjectileSpeed));
+            if(newVelocity.magnitude() > this.maxProjectileSpeed) {
+                newVelocity = newVelocity.normalize().multiplyS(this.maxProjectileSpeed);
+            }
+            
+            projectile.velocity = newVelocity;
+        }
+    }
+    protected spawnProjectile(target: Enemy): Projectile{
+        const projectile = new Projectile();
+        projectile.target = target;
+        this.projectiles.add(projectile);
+        this.projectilesToSpawn--;
+        if((target.abstractHealth -= projectile.damage) <= 0) this.activeEnemies.delete(target);
+        return projectile;
+    }
+    protected async tick(): Promise<void> {
+        this.forceFieldRadius = gameProperties.attackRange.value + this.coreRadius;
+        this.baseScale = 400/this.forceFieldRadius;
+        const newTarget = this.allEnemyTick();
+        this.allProjectileTick();
+
+        if(this.currentTick % 100 === 0)
+        for(let i = 0; i < ((this.currentTick + 1)/100); i++){
             const entity = new Enemy(this);
-            entity.position = Vec2(Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyS(1000);
+            entity.position = Vec2(Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyS(600/this.baseScale);
             entity.rotation = Math.PI * 2 * Math.random();
             entity.velocity = entity.position.multiplyS(-0.01);
-            entity.scaleX = entity.scaleY = this.enemyRadius;
+            entity.scaleX = entity.scaleY = this.enemyHitBox;
+            if(Math.random() > 0.8) {
+                entity.scaleX = entity.scaleY*=0.7;
+                entity.maxSpeedAmplifier = 1.1;
+            }
             //Utils.delay(40_000).then(()=>this.enemies.delete(entity));
             this.enemies.add(entity);
         }
 
-        if(this.currentTick % 5 === 0) 
-        {
-            const projectile = new Projectile();
-            this.enemies.add(projectile as Enemy);
-            projectile.position = Vec2(Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyS(1000);
-            const {x,y} = projectile.velocity = projectile.position.multiplyS(-0.03);
-            //Utils.delay(30_000).then(()=>this.enemies.delete(projectile as Enemy));
-            projectile.velocity = projectile.velocity.add(Vec2(y, -x));
-        }
+        if(newTarget && this.projectilesToSpawn >= 1)
+            this.spawnProjectile(newTarget);
 
+        if(this.projectilesToSpawn < gameProperties.stackSize.value) this.projectilesToSpawn += gameProperties.attackSpeed.value;
         //End of the tick
         this.currentTick++;
+
+        if(this.coreHealth <= 0) this.keepRendering = false;
     }
     protected getStats(): string {
-        return `FPS: ${this.fpsCount}, RES: ${this.optionsResolution}x${this.optionsResolution}, D: ${this.__delta.toFixed(2)}, TICK: ${this.currentTick}, ENTITIES: ${this.enemies.size}`;
+        return `FPS: ${this.fpsCount}, RES: ${this.optionsResolution}x${this.optionsResolution}, D: ${this.__delta.toFixed(2)}, TICK: ${this.currentTick}, EE: ${this.enemies.size}, EPR: ${this.projectiles.size}, STACK: ${this.projectilesToSpawn.toFixed(2)}`;
     }
     protected async renderLoop(): Promise<void> {
         let now = performance.now(), difference = now - this.tickUpTime;
@@ -141,7 +209,7 @@ export class Game {
         if (this.optionsShowStats) {
             context.save();
 
-            context.fillStyle = "#9999";
+            context.fillStyle = "#9994";
             context.textAlign = "start";
             context.textBaseline = "top";
             // get new scale
@@ -156,6 +224,7 @@ export class Game {
         context.translate(context.canvas.width / 2, context.canvas.height / 2);
         // get new scale
         context.scale(scale.x, scale.y);
+        context.scale(this.baseScale, this.baseScale);
 
 
         // Render Background
@@ -163,9 +232,10 @@ export class Game {
         // Render Entities
         
         context.strokeStyle = "#6699ff";
-        context.fillStyle = "#b38"
+        context.fillStyle = "#baf"
         context.lineWidth = 0.1;
         for(const enemy of this.enemies) enemy.render(context);
+        for(const projectile of this.projectiles) projectile.render(context);
         // Render Bullets
         // Render Basement
         this.renderCore();
@@ -177,7 +247,25 @@ export class Game {
         //test(context, 5, 80);
 
         //await Utils.delay(50);
-        requestAnimationFrame(() => this.renderLoop());
+        if(this.keepRendering) requestAnimationFrame(() => this.renderLoop());
+        else{
+            context.reset();
+            context.textRendering = "optimizeSpeed";
+            // Initialize base rendering context
+            // Translate to middle
+            context.translate(context.canvas.width / 2, context.canvas.height / 2);
+            // get new scale
+            context.scale(scale.x, scale.y);
+            context.textAlign = "center";
+            context.textBaseline = "middle";
+            context.strokeStyle = "#ff3344"
+            context.fillStyle = "#0004";
+            context.scale(15 / this.baseScale, 15 / this.baseScale);
+            context.fillRect(-40,-6,80,14);
+            context.strokeText("GAME OVER", 0, 0);
+            context.scale(0.3, 0.3);
+            context.strokeText("Reactor Exploded", 0, 18);
+        }
     }
     protected renderForceField(): void{
         const {context, forceFieldRadius} = this;

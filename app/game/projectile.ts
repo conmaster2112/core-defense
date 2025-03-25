@@ -1,10 +1,12 @@
 import { CustomVisual } from "../drawable";
 import { Entity } from "../entities";
+import { Enemy } from "./enemy";
 
 export class Projectile extends Entity {
+    public target: Enemy | null = null;
+    public damage = 10;
     public constructor(){
         super();
-        const g = 0;
         this.visual = new CustomVisual((c)=>{
             const {x, y} = this.velocity.normalize();
             c.rotate(Math.atan2(y, x) - Math.PI / 2);
