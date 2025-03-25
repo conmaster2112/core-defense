@@ -5,3 +5,5 @@ const game = new Game(uiManager.context);
 game.optionsShowStats = true;
 game.optionsResolution = 1024;
 game.start();
+
+export * from "./drawable";

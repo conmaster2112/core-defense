@@ -6,7 +6,9 @@ export default defineConfig([
         resolve: { tsconfigFilename:"./tsconfig.json" },
         output: {
             file: "./static/index.js",
+            
         },
         platform: "browser",
+        treeshake: false
     }
 ]);

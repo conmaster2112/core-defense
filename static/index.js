@@ -342,9 +342,108 @@ const infoProperties = {
 };
 
 //#endregion
+//#region app/drawable/animation/visual-property.ts
+var AnimationVisualProperty = class {};
+
+//#endregion
+//#region app/drawable/animation/rotation-visual-property.ts
+var AnimationRotationVisualProperty = class extends AnimationVisualProperty {
+	constructor(rad) {
+		super();
+		this.rad = rad;
+	}
+	apply(context, delta) {
+		context.rotate(this.rad * delta);
+	}
+};
+
+//#endregion
+//#region app/drawable/animation/scale-visual-property.ts
+var AnimationScaleVisualProperty = class extends AnimationVisualProperty {
+	constructor(scale) {
+		super();
+		this.scale = scale;
+	}
+	apply(context, delta) {
+		const { x, y } = this.scale;
+		context.scale(1 + x * delta - delta, 1 + y * delta - delta);
+	}
+};
+
+//#endregion
+//#region app/drawable/animation/translate-visual-property.ts
+var AnimationTranslateVisualProperty = class extends AnimationVisualProperty {
+	constructor(offset) {
+		super();
+		this.offset = offset;
+	}
+	apply(context, delta) {
+		const { x, y } = this.offset;
+		context.translate(x * delta, y * delta);
+	}
+};
+
+//#endregion
+//#region app/drawable/animation/animation.ts
+var Animation = class {
+	properties;
+	constructor(func, ...properties) {
+		this.func = func;
+		this.properties = properties;
+	}
+	apply(context, baseDelta) {
+		const d = this.func.pass(baseDelta);
+		for (let i = 0; i < this.properties.length; i++) this.properties[i].apply(context, d);
+	}
+};
+
+//#endregion
+//#region app/drawable/animation/state.ts
+var AnimationFunction = class {};
+
+//#endregion
 //#region app/drawable/animation/custom-function.ts
 const { sin: sin$1, PI: PI$1 } = Math;
 const QU = PI$1 / 2;
+var AnimationCustomFunctionChain = class extends AnimationFunction {
+	constructor(nodes) {
+		super();
+		this.nodes = nodes;
+	}
+	reset = undefined;
+	pass(d) {
+		for (let i = 0; i < this.nodes.length; i++) d = this.nodes[i](d);
+		return d;
+	}
+	chain(node) {
+		this.nodes.push(node);
+		return this;
+	}
+};
+var AnimationNodeTypes = class {
+	constructor() {}
+	static sineNode = (t) => sin$1(QU * t);
+	static quadraticNode = (t) => t ** 2;
+	static inverseNode = (t) => 1 - t;
+	static create(...nodes) {
+		return new AnimationCustomFunctionChain(nodes);
+	}
+};
+
+//#endregion
+//#region app/drawable/animation/index.ts
+var AnimationTypes = class {
+	constructor() {}
+	static rotation(rad) {
+		return new AnimationRotationVisualProperty(rad);
+	}
+	static translation(offset) {
+		return new AnimationTranslateVisualProperty(offset);
+	}
+	static scale(scale) {
+		return new AnimationScaleVisualProperty(scale);
+	}
+};
 
 //#endregion
 //#region app/drawable/drawable.ts
@@ -571,7 +670,9 @@ var Game = class {
 				}
 			}
 			let newVelocity = enemy.velocity.add(_pos.normalize().multiplyS(-maxEnemySpeed));
-			if (newVelocity.magnitude() > maxEnemySpeed) newVelocity = newVelocity.normalize().multiplyS(maxEnemySpeed);
+			if (newVelocity.magnitude() > maxEnemySpeed) {
+				newVelocity = newVelocity.normalize().multiplyS(maxEnemySpeed);
+			}
 			enemy.velocity = newVelocity;
 		}
 		return targetEnemy;
@@ -597,7 +698,9 @@ var Game = class {
 				continue;
 			}
 			let newVelocity = projectile.velocity.add(relativeVec.normalize().multiplyS(-this.maxProjectileSpeed));
-			if (newVelocity.magnitude() > this.maxProjectileSpeed) newVelocity = newVelocity.normalize().multiplyS(this.maxProjectileSpeed);
+			if (newVelocity.magnitude() > this.maxProjectileSpeed) {
+				newVelocity = newVelocity.normalize().multiplyS(this.maxProjectileSpeed);
+			}
 			projectile.velocity = newVelocity;
 		}
 	}
@@ -742,3 +845,4 @@ game.optionsResolution = 1024;
 game.start();
 
 //#endregion
+export { Animation, AnimationCustomFunctionChain, AnimationFunction, AnimationNodeTypes, AnimationRotationVisualProperty, AnimationTypes, AnimationVisualProperty, CustomVisual, Drawable, DrawableShapesFunctions, DrawableShapesPaths, Stride, Visual };
